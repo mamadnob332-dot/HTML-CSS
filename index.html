@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Calculator</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#000000">
+<style>
+:root{--bg:#000;--key:#1a1a1c;--op:#2a2a2d;--fg:#f4f4f6;--dim:#8b8b93;--red:#f0716b;--eq:#1b8070;--panel:#111113;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f3f3f6;--key:#fff;--op:#e4e4ea;--fg:#17171a;--dim:#76767f;--red:#e0483f;--panel:#fff;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f3f3f6;--key:#fff;--op:#e4e4ea;--fg:#17171a;--dim:#76767f;--red:#e0483f;--panel:#fff;color-scheme:light}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center}
+.app{width:100%;max-width:440px;height:100%;display:flex;flex-direction:column;padding:10px 18px 18px;position:relative}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 6px;color:var(--fg)}
+.top svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.top div{display:flex;gap:26px}
+.screen{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding:0 6px 18px;overflow:hidden;direction:ltr}
+.expr{font-size:3.4rem;font-weight:300;line-height:1.15;text-align:right;word-break:break-all;font-variant-numeric:tabular-nums}
+.prev{font-size:1.7rem;color:var(--dim);min-height:2.2rem;font-weight:300;font-variant-numeric:tabular-nums}
+.pad{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(10px,1.8vh,16px)}
+.k{font:inherit;font-size:2rem;font-weight:300;border:0;border-radius:50%;aspect-ratio:1/0.98;background:var(--key);color:var(--fg);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.k:active{filter:brightness(1.5);transform:scale(.95)}
+.k:focus-visible,.btn:focus-visible{outline:3px solid var(--eq);outline-offset:2px}
+.k.o{background:var(--op)}
+.k.r{color:var(--red)}
+.k.e{background:var(--eq);color:#fff}
+.k svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.layer{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;z-index:5;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.layer.on{display:flex}
+.in{width:100%;max-width:440px;height:100%;display:flex;flex-direction:column;padding:16px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0 14px}
+.bar h2{margin:0;font-size:1.3rem;font-weight:500}
+.btn{font:inherit;font-size:1rem;border:0;border-radius:14px;padding:11px 16px;background:var(--op);color:var(--fg);cursor:pointer}
+.btn.p{background:var(--eq);color:#fff}
+.btn.d{background:var(--red);color:#fff}
+.grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;align-content:start}
+.grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;background:var(--panel);cursor:pointer}
+.empty{grid-column:1/-1;text-align:center;color:var(--dim);padding:60px 20px;line-height:1.8}
+.setup{margin:auto 0;display:flex;flex-direction:column;gap:14px}
+.setup input{font:inherit;font-size:1.6rem;text-align:center;letter-spacing:.3em;padding:14px;border-radius:14px;border:2px solid var(--op);background:var(--panel);color:var(--fg);direction:ltr}
+.setup p{margin:0;line-height:1.8;color:var(--dim)}
+.view{background:#000;z-index:9}
+.view video{max-width:100%;max-height:100%;flex:1;min-height:0;background:#000}
+[hidden]{display:none!important}
+.cell{position:relative}.pl{position:absolute;right:6px;bottom:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.view img{max-width:100%;max-height:100%;object-fit:contain;flex:1;min-height:0}
+.view .bar{padding:12px 16px}
+</style>
+</head>
+<body>
+<main class="app" id="calc">
+  <div class="top" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4h3M9 3h6"/></svg>
+    <div>
+      <svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="8" rx="1.5" transform="rotate(-40 12 12)"/><path d="M8 11l1.5 1.5M11 8.5l1.5 1.5M14 6l1.5 1.5" transform="rotate(0)"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 13l2 2 3-6h4"/></svg>
+    </div>
+  </div>
+  <div class="screen"><div class="expr" id="expr">0</div><div class="prev" id="prev"></div></div>
+  <div class="pad" id="pad">
+    <button class="k r" data-k="C">C</button>
+    <button class="k r" data-k="B" aria-label="حذف"><svg viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7z"/><path d="M12 9.5l5 5M17 9.5l-5 5"/></svg></button>
+    <button class="k o" data-k="%">%</button>
+    <button class="k o" data-k="÷">÷</button>
+    <button class="k" data-k="7">7</button><button class="k" data-k="8">8</button><button class="k" data-k="9">9</button>
+    <button class="k o" data-k="×">×</button>
+    <button class="k" data-k="4">4</button><button class="k" data-k="5">5</button><button class="k" data-k="6">6</button>
+    <button class="k o" data-k="−">−</button>
+    <button class="k" data-k="1">1</button><button class="k" data-k="2">2</button><button class="k" data-k="3">3</button>
+    <button class="k o" data-k="+">+</button>
+    <button class="k" data-k="()">( )</button><button class="k" data-k="0">0</button><button class="k" data-k=".">.</button>
+    <button class="k e" data-k="=">=</button>
+  </div>
+</main>
+
+<div class="layer" id="setup"><div class="in setup">
+  <h2 style="margin:0;text-align:center">کد مخفی را انتخاب کن</h2>
+  <p>یک کد ۴ تا ۱۰ رقمی بساز. بعداً همین کد را در ماشین حساب بنویس و دکمه × را بزن تا گالری باز شود. اگر کد را فراموش کنی، عکس‌ها قابل بازیابی نیستند.</p>
+  <input id="pin" type="password" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="••••">
+  <p id="setupErr" style="color:var(--red);min-height:1.6em"></p>
+  <button class="btn p" id="setupBtn">ذخیره کد</button>
+</div></div>
+
+<div class="layer" id="vault"><div class="in">
+  <div class="bar"><h2>گالری</h2><div style="display:flex;gap:8px"><button class="btn p" id="add">افزودن عکس و فیلم</button><button class="btn" id="lock">قفل</button></div></div>
+  <div class="grid" id="grid"></div>
+  <input type="file" id="file" accept="image/*,video/*" multiple hidden>
+</div></div>
+
+<div class="layer view" id="view"><div class="in" style="padding:0;color:#fff">
+  <div class="bar"><button class="btn" id="vclose">بستن</button><button class="btn d" id="vdel">حذف</button></div>
+  <img id="vimg" alt=""><video id="vvid" controls playsinline hidden></video>
+</div></div>
+
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var enc=new TextEncoder();
+
+/* ---------- storage (IndexedDB, with in-memory fallback) ---------- */
+var db=null,mem={cfg:null,imgs:[],n:0};
+function openDB(){return new Promise(function(res){
+  try{var r=indexedDB.open("calcvault",1);
+  r.onupgradeneeded=function(){r.result.createObjectStore("meta");r.result.createObjectStore("img",{autoIncrement:true})};
+  r.onsuccess=function(){db=r.result;res()};r.onerror=function(){res()};}catch(e){res()}});}
+function tx(store,mode,fn){return new Promise(function(res,rej){
+  var t=db.transaction(store,mode),s=t.objectStore(store),q=fn(s);
+  t.oncomplete=function(){res(q&&q.result)};t.onerror=function(){rej(t.error)};});}
+function getCfg(){return db?tx("meta","readonly",function(s){return s.get("cfg")}):Promise.resolve(mem.cfg)}
+function setCfg(c){if(db)return tx("meta","readwrite",function(s){return s.put(c,"cfg")});mem.cfg=c;return Promise.resolve()}
+function allImgs(){
+  if(!db)return Promise.resolve(mem.imgs.slice());
+  return new Promise(function(res){var out=[];var t=db.transaction("img","readonly");
+    t.objectStore("img").openCursor().onsuccess=function(e){var c=e.target.result;if(c){out.push({id:c.key,d:c.value});c.continue()}};
+    t.oncomplete=function(){res(out)}});}
+function putImg(d){if(db)return tx("img","readwrite",function(s){return s.add(d)});mem.imgs.push({id:++mem.n,d:d});return Promise.resolve()}
+function delImg(id){if(db)return tx("img","readwrite",function(s){return s.delete(id)});mem.imgs=mem.imgs.filter(function(x){return x.id!==id});return Promise.resolve()}
+
+/* ---------- crypto ---------- */
+function keyFrom(pin,salt){return crypto.subtle.importKey("raw",enc.encode(pin),"PBKDF2",false,["deriveKey"]).then(function(m){
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt:salt,iterations:150000,hash:"SHA-256"},m,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])})}
+function encrypt(key,buf){var iv=crypto.getRandomValues(new Uint8Array(12));
+  return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},key,buf).then(function(ct){return{iv:iv,ct:ct}})}
+function decrypt(key,o){return crypto.subtle.decrypt({name:"AES-GCM",iv:o.iv},key,o.ct)}
+
+/* ---------- calculator ---------- */
+var expr="",fresh=false,cfg=null,key=null,urls=[];
+var OPS="+−×÷";
+function parse(s){
+  var i=0;s=s.replace(/−/g,"-").replace(/×/g,"*").replace(/÷/g,"/");
+  function ws(){}
+  function num(){var m=/^\d*\.?\d+|^\d+\.?/.exec(s.slice(i));if(!m)throw 0;i+=m[0].length;return parseFloat(m[0])}
+  function prim(){
+    if(s[i]==="-"){i++;return -prim()}
+    var v;
+    if(s[i]==="("){i++;v=add();if(s[i]===")")i++;}else v=num();
+    while(s[i]==="%"){i++;v/=100}
+    return v}
+  function mul(){var v=prim();while(s[i]==="*"||s[i]==="/"||s[i]==="("){
+    if(s[i]==="("){v*=prim();continue}
+    var o=s[i++],r=prim();if(o==="/"&&r===0)throw 0;v=o==="*"?v*r:v/r}return v}
+  function add(){var v=mul();while(s[i]==="+"||s[i]==="-"){var o=s[i++],r=mul();v=o==="+"?v+r:v-r}return v}
+  var out=add();if(i<s.length&&s[i]!==")")throw 0;return out}
+function fmtNum(n){return String(parseFloat(n.toPrecision(12)))}
+function evalSafe(s){try{if(!s)return null;var o=s.replace(/[+−×÷(]+$/,"");if(!o)return null;
+  var open=(o.match(/\(/g)||[]).length-(o.match(/\)/g)||[]).length;while(open-->0)o+=")";
+  var v=parse(o);return isFinite(v)?fmtNum(v):null}catch(e){return null}}
+function render(){
+  var e=$("expr");e.textContent=expr||"0";
+  var n=expr.length;e.style.fontSize=n>16?"1.9rem":n>11?"2.6rem":n>7?"3rem":"3.4rem";
+  var hasOp=/[+−×÷%()]/.test(expr.replace(/^−/,""));
+  $("prev").textContent=(hasOp&&!fresh)?(evalSafe(expr)||""):""}
+function last(){return expr.slice(-1)}
+function tryVault(){
+  if(!cfg||!/^\d{4,10}$/.test(expr))return Promise.resolve(false);
+  var pin=expr;
+  return keyFrom(pin,cfg.salt).then(function(k){return decrypt(k,cfg.check).then(function(){key=k;return true})}).catch(function(){return false})}
+function press(k){
+  if(/\d/.test(k)){if(fresh){expr="";fresh=false}if(expr==="0")expr="";expr+=k}
+  else if(k==="."){if(fresh){expr="";fresh=false}var m=/[\d.]*$/.exec(expr)[0];if(m.indexOf(".")<0)expr+=(m?"":"0")+"."}
+  else if(k==="C"){expr="";fresh=false}
+  else if(k==="B"){if(fresh){expr="";fresh=false}else expr=expr.slice(0,-1)}
+  else if(k==="()"){fresh=false;var o=(expr.match(/\(/g)||[]).length,c=(expr.match(/\)/g)||[]).length,l=last();
+    if(o>c&&/[\d)%]/.test(l))expr+=")";else{if(/[\d)%]/.test(l))expr+="×";expr+="("}}
+  else if(k==="%"){fresh=false;if(/[\d)]/.test(last()))expr+="%"}
+  else if(k==="="){var r=evalSafe(expr);if(r!==null&&expr){expr=r.replace("-","−");fresh=true}else if(expr)flash()}
+  else{ /* operators */
+    if(k==="×"&&!fresh){tryVault().then(function(ok){if(ok)openVault();else addOp("×");render()});return}
+    addOp(k)}
+  render()}
+function addOp(k){
+  fresh=false;
+  if(!expr){if(k==="−")expr="−";return}
+  if(last()==="("){if(k==="−")expr+="−";return}
+  if(OPS.indexOf(last())>=0){expr=expr.slice(0,-1)+k;return}
+  expr+=k}
+function flash(){var e=$("expr");e.style.opacity=.4;setTimeout(function(){e.style.opacity=1},150)}
+$("pad").addEventListener("click",function(e){var b=e.target.closest("button");if(b&&!$("vault").classList.contains("on"))press(b.getAttribute("data-k"))});
+document.addEventListener("keydown",function(e){
+  if($("vault").classList.contains("on")||$("setup").classList.contains("on"))return;
+  var m={"*":"×","/":"÷","-":"−","Enter":"=","Backspace":"B","Escape":"C","(":"()",")":"()"};var k=m[e.key]||e.key;
+  if(/^[0-9.+%=]$/.test(k)||"×÷−BC".indexOf(k)>=0&&k.length===1||k==="()"){e.preventDefault();press(k)}});
+
+/* ---------- setup ---------- */
+function showSetup(){$("setup").classList.add("on")}
+$("setupBtn").onclick=function(){
+  var p=$("pin").value;
+  if(!/^\d{4,10}$/.test(p)){$("setupErr").textContent="کد باید فقط عدد و بین ۴ تا ۱۰ رقم باشد.";return}
+  var salt=crypto.getRandomValues(new Uint8Array(16));
+  keyFrom(p,salt).then(function(k){return encrypt(k,enc.encode("ok")).then(function(chk){
+    cfg={salt:salt,check:chk};return setCfg(cfg)})}).then(function(){
+    $("pin").value="";$("setup").classList.remove("on")}).catch(function(){$("setupErr").textContent="ذخیره نشد. دوباره تلاش کن."})};
+
+/* ---------- vault ---------- */
+function openVault(){expr="";fresh=false;render();$("vault").classList.add("on");loadGrid()}
+function lock(){key=null;urls.forEach(URL.revokeObjectURL);urls=[];$("grid").innerHTML="";
+  closeView();$("vault").classList.remove("on");expr="";fresh=false;render()}
+$("lock").onclick=lock;
+document.addEventListener("visibilitychange",function(){if(document.hidden){if(key&&!picking)lock()}else setTimeout(function(){picking=false},2000)});
+function parts(it){var d=it.d;return d.full?d:{kind:"image",mime:"image/jpeg",thumb:d,full:d}}
+function loadGrid(){
+  var g=$("grid");g.innerHTML="";urls.forEach(URL.revokeObjectURL);urls=[];
+  allImgs().then(function(list){
+    if(!list.length){g.innerHTML='<div class="empty">هنوز چیزی اضافه نشده.<br>روی «افزودن» بزن.</div>';return}
+    list.forEach(function(it){
+      var p=parts(it),cell=document.createElement("div");cell.className="cell";g.appendChild(cell);
+      decrypt(key,p.thumb).then(function(buf){
+        var u=URL.createObjectURL(new Blob([buf],{type:"image/jpeg"}));urls.push(u);
+        var im=new Image();im.src=u;im.alt="";im.onclick=function(){openItem(it.id,p)};cell.appendChild(im);
+        if(p.kind==="video"){var s=document.createElement("span");s.className="pl";s.textContent="\u25B6";cell.appendChild(s)}
+      }).catch(function(){cell.remove()})})})}
+var picking=false,MAXV=400*1024*1024;
+$("add").onclick=function(){picking=true;$("file").click()};
+$("file").onchange=function(){
+  var files=Array.prototype.slice.call(this.files);this.value="";
+  var chain=Promise.resolve(),skipped=0;
+  files.forEach(function(f){chain=chain.then(function(){return importFile(f)}).catch(function(e){if(e==="big")skipped++})});
+  chain.then(function(){
+    if(skipped){var t=document.querySelector("#vault h2");t.textContent="فایل بزرگ‌تر از ۴۰۰ مگابایت اضافه نشد";setTimeout(function(){t.textContent="گالری"},4000)}
+    loadGrid()})};
+function importFile(f){
+  if(/^video\//.test(f.type)){
+    if(f.size>MAXV)return Promise.reject("big");
+    return Promise.all([vidThumb(f),f.arrayBuffer()]).then(function(r){
+      return Promise.all([encrypt(key,r[0]),encrypt(key,r[1])]).then(function(e){
+        return putImg({kind:"video",mime:f.type||"video/mp4",thumb:e[0],full:e[1]})})})}
+  return createImageBitmap(f).then(function(bm){
+    return Promise.all([scale(bm,1800,.88),scale(bm,420,.8)])}).then(function(r){
+    return Promise.all([encrypt(key,r[0]),encrypt(key,r[1])])}).then(function(e){
+    return putImg({kind:"image",mime:"image/jpeg",thumb:e[1],full:e[0]})})}
+function blobBuf(c,q){return new Promise(function(res,rej){c.toBlob(function(b){b?b.arrayBuffer().then(res):rej()},"image/jpeg",q)})}
+function scale(bm,max,q){
+  var s=Math.min(1,max/Math.max(bm.width,bm.height)),c=document.createElement("canvas");
+  c.width=Math.round(bm.width*s);c.height=Math.round(bm.height*s);c.getContext("2d").drawImage(bm,0,0,c.width,c.height);
+  return blobBuf(c,q)}
+function vidThumb(f){return new Promise(function(res){
+  var u=URL.createObjectURL(f),v=document.createElement("video"),done=false;
+  function fin(c){if(done)return;done=true;URL.revokeObjectURL(u);blobBuf(c,.8).then(res).catch(function(){res(new ArrayBuffer(0))})}
+  function fallback(){var c=document.createElement("canvas");c.width=c.height=300;var x=c.getContext("2d");x.fillStyle="#2a2d38";x.fillRect(0,0,300,300);fin(c)}
+  v.muted=true;v.playsInline=true;v.preload="auto";v.src=u;
+  v.onloadeddata=function(){try{v.currentTime=Math.min(0.5,(v.duration||1)/2)}catch(e){fallback()}};
+  v.onseeked=function(){try{
+    if(!v.videoWidth)return fallback();
+    var s=Math.min(1,420/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement("canvas");
+    c.width=Math.round(v.videoWidth*s);c.height=Math.round(v.videoHeight*s);c.getContext("2d").drawImage(v,0,0,c.width,c.height);fin(c)}catch(e){fallback()}};
+  v.onerror=fallback;setTimeout(fallback,8000)})}
+var curId=null,armed=false,vurl=null;
+function closeView(){var v=$("vvid");v.pause();v.removeAttribute("src");v.load();$("vimg").removeAttribute("src");if(vurl){URL.revokeObjectURL(vurl);vurl=null}$("view").classList.remove("on")}
+function openItem(id,p){
+  decrypt(key,p.full).then(function(buf){
+    vurl=URL.createObjectURL(new Blob([buf],{type:p.mime}));curId=id;armed=false;$("vdel").textContent="حذف";
+    var isV=p.kind==="video";$("vimg").hidden=isV;$("vvid").hidden=!isV;
+    if(isV)$("vvid").src=vurl;else $("vimg").src=vurl;
+    $("view").classList.add("on")}).catch(function(){})}
+$("vclose").onclick=closeView;
+$("vdel").onclick=function(){
+  if(!armed){armed=true;this.textContent="تأیید حذف";return}
+  delImg(curId).then(function(){closeView();loadGrid()})};
+
+/* ---------- start ---------- */
+if("serviceWorker"in navigator){try{navigator.serviceWorker.register("sw.js").catch(function(){})}catch(e){}}
+render();
+openDB().then(getCfg).then(function(c){cfg=c||null;if(!cfg)showSetup()});
+})();
+</script>
+</body>
+</html>
